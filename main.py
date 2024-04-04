@@ -23,9 +23,9 @@ if __name__ == "__main__":
     config_parser, _ = get_parser_with_args('config.json')
     opt = config_parser.parse_args()
 
-    # transform = tr.Compose(
-    #     [RandomFlip(), RandomRot()])
-    transform = None
+    transform = tr.Compose(
+        [RandomFlip(), RandomRot()])
+    # transform = None
     dataset = OSCDLightning(opt.dataset, opt.batch_size,
                             transform=transform, num_workers=os.cpu_count())
 
