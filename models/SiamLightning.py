@@ -40,7 +40,7 @@ class SiamLightning(L.LightningModule):
         image1, image2, y, feat1, feat2 = self.transform(batch)
 
         y_hat = self.model(image1, image2, feat1, feat2)
-        loss = F.nll_loss(input=y_hat, target=y)
+        loss = F.nll_loss(input=y_hat, target=y.long())
         self.log("metrics/batch/loss", loss, prog_bar=False)
 
         y_true = y
@@ -59,7 +59,7 @@ class SiamLightning(L.LightningModule):
         y_true = np.array([])
         y_pred = np.array([])
         for results_dict in outputs:
-            loss = np.append(loss, results_dict["loss"])
+            loss = np.append(loss, results_dict["loss"].cpu().numpy())
             y_true = np.append(y_true, results_dict["y_true"])
             y_pred = np.append(y_pred, results_dict["y_pred"])
         y_true = torch.tensor(y_true)
@@ -71,7 +71,7 @@ class SiamLightning(L.LightningModule):
     def validation_step(self, batch, batch_idx):
         image1, image2, y, feat1, feat2 = self.transform(batch)
         y_hat = self.model(image1, image2, feat1, feat2)
-        loss = F.nll_loss(input=y_hat, target=y)
+        loss = F.nll_loss(input=y_hat, target=y.long())
 
         y_true = y.cpu().detach().numpy()
         y_pred = y_hat.argmax(axis=1).cpu().detach().numpy()
@@ -83,7 +83,7 @@ class SiamLightning(L.LightningModule):
         y_true = np.array([])
         y_pred = np.array([])
         for results_dict in outputs:
-            loss = np.append(loss, results_dict["loss"])
+            loss = np.append(loss, results_dict["loss"].cpu().numpy())
             y_true = np.append(y_true, results_dict["y_true"])
             y_pred = np.append(y_pred, results_dict["y_pred"])
         y_true = torch.tensor(y_true)

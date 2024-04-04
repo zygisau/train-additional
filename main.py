@@ -27,11 +27,11 @@ if __name__ == "__main__":
         [RandomFlip(), RandomRot()])
     # transform = None
     dataset = OSCDLightning(opt.dataset, opt.batch_size,
-                            transform=transform, num_workers=os.cpu_count())
+                            transform=transform, num_workers=2)
 
     batch_transform = AppendFeatures(
         opt.feature_model_path, opt.feature_model_checkpoint_path)
     model = SiamLightning(bands='all', lr=opt.lr, transform=batch_transform)
 
-    trainer = Trainer(logger=neptune_logger, max_epochs=opt.max_epochs)
+    trainer = Trainer(logger=neptune_logger, max_epochs=opt.max_epochs, accelerator='gpu', devices=1)
     trainer.fit(model, dataset)

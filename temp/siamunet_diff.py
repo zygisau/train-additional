@@ -158,9 +158,9 @@ class SiamUnet_diff(nn.Module):
 
         # 🚧🚧🚧🚧🚧
         # reshape feat1 and feat2 from 1x384000 to closest
-        feat1 = torch.cat([feat1, torch.zeros(feat1.shape[0], (1 * 128 * 28 * 28 - feat1.shape[1]))],
+        feat1 = torch.cat([feat1, torch.zeros(feat1.shape[0], (1 * 128 * 28 * 28 - feat1.shape[1]), device=feat1.device)],
                           dim=1).reshape((feat1.shape[0], 128, 28, 28))
-        feat2 = torch.cat([feat2, torch.zeros(feat2.shape[0], (1 * 128 * 28 * 28 - feat2.shape[1]))],
+        feat2 = torch.cat([feat2, torch.zeros(feat2.shape[0], (1 * 128 * 28 * 28 - feat2.shape[1]), device=feat2.device)],
                           dim=1).reshape((feat2.shape[0], 128, 28, 28))
         # concat
         x4p = torch.cat((x43_1, x43_2, feat1, feat2), 1)

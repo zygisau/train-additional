@@ -142,9 +142,11 @@ def read_sentinel_img_trio(img_path, labels_path):
     # crop if necessary
     s1 = I1.shape
     s2 = I2.shape
-    I2 = np.pad(I2, ((0, s1[0] - s2[0]), (0, s1[1] - s2[1]), (0, 0)), 'edge')
+    new_I2 = np.pad(
+        I2, ((0, 0), (0, s1[1] - s2[1]), (0, s1[2] - s2[2])), 'edge')
 
-    return I1, I2, cm
+    return I1, new_I2, cm
+
 
 
 def reshape_for_torch(I):

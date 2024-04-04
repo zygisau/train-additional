@@ -9,9 +9,9 @@ class AppendFeatures:
         weights_path = feature_model_path
         # load weights
         if torch.cuda.is_available():
-            checkpoint = torch.load(weights_path, map_location="cuda:0")
-            device = torch.device("cuda")
-            checkpoint.to(device)
+            checkpoint = torch.load(weights_path)
+            # device = torch.device("cuda")
+            # checkpoint.to(device)
         else:
             checkpoint = torch.load(weights_path, map_location="cpu")
 
@@ -27,6 +27,8 @@ class AppendFeatures:
 
         # instantiate model
         model = MaskedAutoencoderViT(**model_args)
+        if torch.cuda.is_available():
+            model.to('cuda')
         model.eval()
 
         # load weights into model
@@ -34,6 +36,8 @@ class AppendFeatures:
         del checkpoint['pos_embed']
         del checkpoint['decoder_pos_embed']
         _ = model.load_state_dict(checkpoint, strict=False)
+        if torch.cuda.is_available():
+            model.to('cuda')
         self.model = model
 
     def __call__(self, samples):
@@ -46,10 +50,17 @@ class AppendFeatures:
         img2_reshaped = img2_reshaped.reshape(
             *img2_reshaped.shape[:2], 1, *img2_reshaped.shape[-2:]).float()
         mask_ratio = 0.75
+        if torch.cuda.is_available():
+            img1_reshaped = img1_reshaped.cuda()
+            img2_reshaped = img2_reshaped.cuda()
+            mask = mask.cuda()
+
         with torch.no_grad():
             features1, _, __ = self.model(img1_reshaped, mask_ratio)
             features2, _, __ = self.model(img2_reshaped, mask_ratio)
 
         features1 = torch.flatten(features1, 1)
         features2 = torch.flatten(features2, 1)
+        if torch.cuda.is_available():
+            img1, img2, mask, features1, features2 = img1.cuda(), img2.cuda(), mask.cuda(), features1.cuda(), features2.cuda()
         return img1, img2, mask, features1, features2
