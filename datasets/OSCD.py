@@ -1,7 +1,7 @@
 # Functions
 
 from skimage import io
-from math import ceil
+from math import ceil, floor
 import os
 import numpy as np
 from pandas import read_csv
@@ -142,10 +142,15 @@ def read_sentinel_img_trio(img_path, labels_path):
     # crop if necessary
     s1 = I1.shape
     s2 = I2.shape
+    s_max = (max(s1[0], s2[0]), max(s1[1], s2[1]), max(s1[2], s2[2]))
     new_I2 = np.pad(
-        I2, ((0, 0), (0, s1[1] - s2[1]), (0, s1[2] - s2[2])), 'edge')
+        I2, ((0, 0), (0, s_max[1] - s2[1]), (0, s_max[2] - s2[2])), 'edge')
+    new_I1 = np.pad(
+        I1, ((0, 0), (0, s_max[1] - s1[1]), (0, s_max[2] - s1[2])), 'edge')
 
-    return I1, new_I2, cm
+    # skip if shapes are not equal
+
+    return new_I1, new_I2, cm
 
 
 
@@ -206,8 +211,8 @@ class OSCDDataset(Dataset):
 
             # calculate the number of patches
             s = self.imgs_1[im_name].shape
-            n1 = ceil((s[1] - self.patch_side + 1) / self.stride)
-            n2 = ceil((s[2] - self.patch_side + 1) / self.stride)
+            n1 = floor((s[1] - self.patch_side + 1) / self.stride)
+            n2 = floor((s[2] - self.patch_side + 1) / self.stride)
             n_patches_i = n1 * n2
             self.n_patches_per_image[im_name] = n_patches_i
             self.n_patches += n_patches_i
@@ -241,17 +246,15 @@ class OSCDDataset(Dataset):
                                   limits[2]:limits[3]]
         I2 = self.imgs_2[im_name][:, limits[0]:limits[1],
                                   limits[2]:limits[3]]
-        I1 = torch.from_numpy(I1).float()
-        I2 = torch.from_numpy(I2).float()
 
         if I1.shape[1] < self.patch_side or I1.shape[2] < self.patch_side:
-            print(
-                f'Problem with image size, image: {im_name}, I1 shape: {I1.shape}, I2 shape {I2.shape}, limits: {limits}')
+            print(f'Problem with image size, image: {im_name}, I1 shape: {I1.shape}, I2 shape {I2.shape}, limits: {limits}')
             print('EXPECT ERROR')
-        I1 = np.pad(I1, ((0, 0), (0, self.patch_side -
-                    I1.shape[1]), (0, self.patch_side - I1.shape[2])), 'edge')
-        I2 = np.pad(I2, ((0, 0), (0, self.patch_side -
-                    I2.shape[1]), (0, self.patch_side - I2.shape[2])), 'edge')
+        I1 = np.pad(I1, ((0, 0), (0, self.patch_side - I1.shape[1]), (0, self.patch_side - I1.shape[2])), 'edge')
+        I2 = np.pad(I2, ((0, 0), (0, self.patch_side - I2.shape[1]), (0, self.patch_side - I2.shape[2])), 'edge')
+
+        I1 = torch.from_numpy(I1).float()
+        I2 = torch.from_numpy(I2).float()
 
         label = self.change_maps[im_name][limits[0]:limits[1], limits[2]:limits[3]]
         label = np.pad(label, ((0, self.patch_side -
