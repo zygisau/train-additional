@@ -244,7 +244,18 @@ class OSCDDataset(Dataset):
         I1 = torch.from_numpy(I1).float()
         I2 = torch.from_numpy(I2).float()
 
+        if I1.shape[1] < self.patch_side or I1.shape[2] < self.patch_side:
+            print(
+                f'Problem with image size, image: {im_name}, I1 shape: {I1.shape}, I2 shape {I2.shape}, limits: {limits}')
+            print('EXPECT ERROR')
+        I1 = np.pad(I1, ((0, 0), (0, self.patch_side -
+                    I1.shape[1]), (0, self.patch_side - I1.shape[2])), 'edge')
+        I2 = np.pad(I2, ((0, 0), (0, self.patch_side -
+                    I2.shape[1]), (0, self.patch_side - I2.shape[2])), 'edge')
+
         label = self.change_maps[im_name][limits[0]:limits[1], limits[2]:limits[3]]
+        label = np.pad(label, ((0, self.patch_side -
+                       label.shape[0]), (0, self.patch_side - label.shape[1])), 'edge')
         label = torch.from_numpy(1*np.array(label)).float()
 
         sample = [I1, I2, label]

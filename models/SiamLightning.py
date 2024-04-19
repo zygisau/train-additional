@@ -48,9 +48,9 @@ class SiamLightning(L.LightningModule):
         acc = torchmetrics.functional.accuracy(y_true, y_pred, task="binary")
         prec = torchmetrics.functional.precision(y_true, y_pred, task="binary")
         rec = torchmetrics.functional.recall(y_true, y_pred, task="binary")
-        self.log("metrics/batch/acc", acc)
-        self.log("metrics/batch/prec", prec)
-        self.log("metrics/batch/rec", rec)
+        self.log("metrics_batch_acc", acc)
+        self.log("metrics_batch_prec", prec)
+        self.log("metrics_batch_rec", rec)
 
         return {"loss": loss, "y_true": y_true, "y_pred": y_pred}
 
@@ -65,8 +65,8 @@ class SiamLightning(L.LightningModule):
         y_true = torch.tensor(y_true)
         y_pred = torch.tensor(y_pred)
         acc = torchmetrics.functional.accuracy(y_true, y_pred, task="binary")
-        self.log("metrics/epoch/loss", loss.mean())
-        self.log("metrics/epoch/acc", acc)
+        self.log("metrics_epoch_loss", loss.mean())
+        self.log("metrics_epoch_acc", acc)
 
     def validation_step(self, batch, batch_idx):
         image1, image2, y, feat1, feat2 = self.transform(batch)
@@ -91,10 +91,10 @@ class SiamLightning(L.LightningModule):
         acc = torchmetrics.functional.accuracy(y_true, y_pred, task="binary")
         prec = torchmetrics.functional.precision(y_true, y_pred, task="binary")
         rec = torchmetrics.functional.recall(y_true, y_pred, task="binary")
-        self.log("metrics/val/loss", loss.mean())
-        self.log("metrics/val/acc", acc)
-        self.log("metrics/val/prec", prec)
-        self.log("metrics/val/rec", rec)
+        self.log("metrics_val_loss", loss.mean())
+        self.log("metrics_val_acc", acc)
+        self.log("metrics_val_prec", prec)
+        self.log("metrics_val_rec", rec)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), weight_decay=1e-4, lr=self.lr)

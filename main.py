@@ -1,6 +1,7 @@
 
 
 import os
+import signal
 from lightning import Trainer
 from datasets.OSCDLightning import OSCDLightning
 from models.SiamLightning import SiamLightning
@@ -11,6 +12,8 @@ from utils.dotted import dotted
 from utils.parser import get_parser_with_args
 from pytorch_lightning.loggers import NeptuneLogger
 import torchvision.transforms as tr
+from lightning.pytorch.plugins.environments import SLURMEnvironment
+from lightning.pytorch.callbacks import ModelCheckpoint
 
 neptune_logger = NeptuneLogger(
     project="zygisau/train-additional",
@@ -28,10 +31,15 @@ if __name__ == "__main__":
     # transform = None
     dataset = OSCDLightning(opt.dataset, opt.batch_size,
                             transform=transform, num_workers=2)
+    checkpoints = [ModelCheckpoint(
+        every_n_train_steps=1000, auto_insert_metric_name=True, monitor='metrics_batch_acc', save_top_k=10, save_on_train_epoch_end=True, save_last=True, every_n_epochs=1), ModelCheckpoint(
+        every_n_train_steps=1000, auto_insert_metric_name=True, monitor='metrics_epoch_loss', save_top_k=10, save_on_train_epoch_end=True, save_last=True, every_n_epochs=1), ModelCheckpoint(
+        every_n_train_steps=1000, auto_insert_metric_name=True, monitor='metrics_epoch_acc', save_top_k=10, save_on_train_epoch_end=True, save_last=True, every_n_epochs=1)]
 
     batch_transform = AppendFeatures(
         opt.feature_model_path, opt.feature_model_checkpoint_path)
     model = SiamLightning(bands='all', lr=opt.lr, transform=batch_transform)
 
-    trainer = Trainer(logger=neptune_logger, max_epochs=opt.max_epochs, accelerator='gpu', devices=1)
+    trainer = Trainer(logger=neptune_logger,
+                      max_epochs=opt.max_epochs, accelerator='gpu', devices=1, plugins=[SLURMEnvironment(requeue_signal=signal.SIGHUP), *checkpoints])
     trainer.fit(model, dataset)
