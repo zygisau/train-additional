@@ -31,15 +31,18 @@ if __name__ == "__main__":
     # transform = None
     dataset = OSCDLightning(opt.dataset, opt.batch_size,
                             transform=transform, num_workers=2)
-    checkpoints = [ModelCheckpoint(
-        every_n_train_steps=1000, auto_insert_metric_name=True, monitor='metrics_batch_acc', save_top_k=10, save_on_train_epoch_end=True, save_last=True, every_n_epochs=1), ModelCheckpoint(
-        every_n_train_steps=1000, auto_insert_metric_name=True, monitor='metrics_epoch_loss', save_top_k=10, save_on_train_epoch_end=True, save_last=True, every_n_epochs=1), ModelCheckpoint(
-        every_n_train_steps=1000, auto_insert_metric_name=True, monitor='metrics_epoch_acc', save_top_k=10, save_on_train_epoch_end=True, save_last=True, every_n_epochs=1)]
-
+    checkpoints = [
+        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_batch_acc', save_top_k=3, save_last=True, every_n_epochs=1),
+        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_batch_acc', save_top_k=3, save_last=True, every_n_train_steps=1000),
+        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_epoch_acc',
+                        save_top_k=3, save_on_train_epoch_end=True, save_last=True, every_n_epochs=1),
+        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_epoch_acc', save_top_k=3,
+                        save_on_train_epoch_end=True, save_last=True, every_n_train_steps=1000)
+    ]
     batch_transform = AppendFeatures(
         opt.feature_model_path, opt.feature_model_checkpoint_path)
     model = SiamLightning(bands='all', lr=opt.lr, transform=batch_transform)
 
     trainer = Trainer(logger=neptune_logger,
-                      max_epochs=opt.max_epochs, accelerator='gpu', devices=1, plugins=[SLURMEnvironment(requeue_signal=signal.SIGHUP), *checkpoints])
+                      max_epochs=opt.max_epochs, accelerator='gpu', devices=1, plugins=[SLURMEnvironment(requeue_signal=signal.SIGHUP)], callbacks=checkpoints)
     trainer.fit(model, dataset)
