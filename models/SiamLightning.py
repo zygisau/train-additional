@@ -46,7 +46,8 @@ class SiamLightning(L.LightningModule):
 
         y_hat = self.model(image1, image2, feat1, feat2)
         loss = F.nll_loss(input=y_hat, target=y.long())
-        self.log("metrics_train_loss", loss, on_step=True, on_epoch=True, prog_bar=False)
+        self.log("metrics_train_loss", loss, on_step=True,
+                 on_epoch=True, prog_bar=False)
 
         y_true = y.cpu()
         y_pred = y_hat.argmax(axis=1).cpu()
@@ -54,33 +55,34 @@ class SiamLightning(L.LightningModule):
         recall = self.train_recall(y_pred, y_true)
         f1 = self.train_f1(y_pred, y_true)
         acc = self.train_accuracy(y_pred, y_true)
-        
+
         self.log("metrics_train_prec", precision, on_step=True, on_epoch=True)
         self.log("metrics_train_rec", recall, on_step=True, on_epoch=True)
         self.log("metrics_train_f1", f1, on_step=True, on_epoch=True)
         self.log("metrics_train_acc", acc, on_step=True, on_epoch=True)
 
-        return {"loss": loss, "y_true": y_true, "y_pred": y_pred}
+        # return {"loss": loss, "y_true": y_true, "y_pred": y_pred}
 
-    def training_epoch_end(self, outputs):
-        loss = np.array([])
-        y_true = np.array([])
-        y_pred = np.array([])
-        for results_dict in outputs:
-            loss = np.append(loss, results_dict["loss"].cpu().numpy())
-            y_true = np.append(y_true, results_dict["y_true"])
-            y_pred = np.append(y_pred, results_dict["y_pred"])
-        y_true = torch.tensor(y_true)
-        y_pred = torch.tensor(y_pred)
-        acc = torchmetrics.functional.accuracy(y_true, y_pred, task="binary")
-        self.log("metrics_epoch_loss", loss.mean())
-        self.log("metrics_epoch_acc", acc)
+    # def training_epoch_end(self, outputs):
+    #     loss = np.array([])
+    #     y_true = np.array([])
+    #     y_pred = np.array([])
+    #     for results_dict in outputs:
+    #         loss = np.append(loss, results_dict["loss"].cpu().numpy())
+    #         y_true = np.append(y_true, results_dict["y_true"])
+    #         y_pred = np.append(y_pred, results_dict["y_pred"])
+    #     y_true = torch.tensor(y_true)
+    #     y_pred = torch.tensor(y_pred)
+    #     acc = torchmetrics.functional.accuracy(y_true, y_pred, task="binary")
+    #     self.log("metrics_epoch_loss", loss.mean())
+    #     self.log("metrics_epoch_acc", acc)
 
     def validation_step(self, batch, batch_idx):
         image1, image2, y, feat1, feat2 = self.transform(batch)
         y_hat = self.model(image1, image2, feat1, feat2)
         loss = F.nll_loss(input=y_hat, target=y.long())
-        self.log("metrics_valid_loss", loss, on_step=False, on_epoch=True, prog_bar=False)
+        self.log("metrics_valid_loss", loss, on_step=False,
+                 on_epoch=True, prog_bar=False)
 
         y_true = y.cpu()
         y_pred = y_hat.argmax(axis=1).cpu()
@@ -93,25 +95,25 @@ class SiamLightning(L.LightningModule):
         self.log("metrics_valid_f1", f1, on_step=False, on_epoch=True)
         self.log("metrics_valid_acc", accuracy, on_step=False, on_epoch=True)
 
-        return {"loss": loss, "y_true": y_true, "y_pred": y_pred}
+        # return {"loss": loss, "y_true": y_true, "y_pred": y_pred}
 
-    def validation_epoch_end(self, outputs):
-        loss = np.array([])
-        y_true = np.array([])
-        y_pred = np.array([])
-        for results_dict in outputs:
-            loss = np.append(loss, results_dict["loss"].cpu().numpy())
-            y_true = np.append(y_true, results_dict["y_true"])
-            y_pred = np.append(y_pred, results_dict["y_pred"])
-        y_true = torch.tensor(y_true)
-        y_pred = torch.tensor(y_pred)
-        acc = torchmetrics.functional.accuracy(y_true, y_pred, task="binary")
-        prec = torchmetrics.functional.precision(y_true, y_pred, task="binary")
-        rec = torchmetrics.functional.recall(y_true, y_pred, task="binary")
-        self.log("metrics_val_loss", loss.mean())
-        self.log("metrics_val_acc", acc)
-        self.log("metrics_val_prec", prec)
-        self.log("metrics_val_rec", rec)
+    # def validation_epoch_end(self, outputs):
+    #     loss = np.array([])
+    #     y_true = np.array([])
+    #     y_pred = np.array([])
+    #     for results_dict in outputs:
+    #         loss = np.append(loss, results_dict["loss"].cpu().numpy())
+    #         y_true = np.append(y_true, results_dict["y_true"])
+    #         y_pred = np.append(y_pred, results_dict["y_pred"])
+    #     y_true = torch.tensor(y_true)
+    #     y_pred = torch.tensor(y_pred)
+    #     acc = torchmetrics.functional.accuracy(y_true, y_pred, task="binary")
+    #     prec = torchmetrics.functional.precision(y_true, y_pred, task="binary")
+    #     rec = torchmetrics.functional.recall(y_true, y_pred, task="binary")
+    #     self.log("metrics_val_loss", loss.mean())
+    #     self.log("metrics_val_acc", acc)
+    #     self.log("metrics_val_prec", prec)
+    #     self.log("metrics_val_rec", rec)
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), weight_decay=1e-4, lr=self.lr)
