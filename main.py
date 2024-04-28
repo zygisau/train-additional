@@ -18,7 +18,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 neptune_logger = NeptuneLogger(
     project="zygisau/train-additional",
     api_key="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiIyODJmMDUwMS02NGRmLTRiZGQtYWZlNS0xYmI4ZmFiYjZmMzIifQ==",
-    log_model_checkpoints=False,
+    log_model_checkpoints=True,
 )
 
 
@@ -32,17 +32,24 @@ if __name__ == "__main__":
     dataset = OSCDLightning(opt.dataset, opt.batch_size,
                             transform=transform, num_workers=2)
     checkpoints = [
-        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_batch_acc', save_top_k=3, save_last=True, every_n_epochs=1),
-        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_batch_acc', save_top_k=3, save_last=True, every_n_train_steps=1000),
-        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_epoch_acc',
-                        save_top_k=3, save_on_train_epoch_end=True, save_last=True, every_n_epochs=1),
-        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_epoch_acc', save_top_k=3,
-                        save_on_train_epoch_end=True, save_last=True, every_n_train_steps=1000)
+        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_train_prec', save_top_k=3, save_last=True, every_n_epochs=1),
+        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_train_acc', save_top_k=3, save_last=True, every_n_epochs=1),
+        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_valid_prec', save_top_k=3, save_last=True, every_n_epochs=1),
+        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_valid_acc', save_top_k=3, save_last=True, every_n_epochs=1),
+        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_train_prec', save_last=True, every_n_train_steps=1000),
+        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_train_acc', save_last=True, every_n_train_steps=1000),
+        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_valid_prec', save_last=True, every_n_train_steps=1000),
+        ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_valid_acc', save_last=True, every_n_train_steps=1000)
     ]
+    
+    print("=== Best models ===")
+    print([c.best_model_path for c in checkpoints])
+    print("===================")
+
     batch_transform = AppendFeatures(
         opt.feature_model_path, opt.feature_model_checkpoint_path)
     model = SiamLightning(bands='all', lr=opt.lr, transform=batch_transform)
 
-    trainer = Trainer(logger=neptune_logger,
-                      max_epochs=opt.max_epochs, accelerator='gpu', devices=1, plugins=[SLURMEnvironment(requeue_signal=signal.SIGHUP)], callbacks=checkpoints)
+    trainer = Trainer(logger=neptune_logger, max_epochs=opt.max_epochs, accelerator='gpu', devices=1, plugins=[SLURMEnvironment(
+        requeue_signal=signal.SIGHUP)], callbacks=checkpoints, default_root_dir="/scratch/lustre/home/zyau5516/source/train-additional/.neptune/None/version_None/checkpoints", resume_from_checkpoint="/scratch/lustre/home/zyau5516/source/train-additional/.neptune/None/version_None/checkpoints/epoch=0-step=27000.ckpt")
     trainer.fit(model, dataset)
