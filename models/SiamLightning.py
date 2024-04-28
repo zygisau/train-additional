@@ -9,7 +9,7 @@ from temp.siamunet_diff import SiamUnet_diff
 
 
 class SiamLightning(L.LightningModule):
-    def __init__(self, bands, lr, transform=None):
+    def __init__(self, bands, lr, transform=None, model_checkpoint=None):
         super().__init__()
         self.lr = lr
         self.transform = transform
@@ -20,13 +20,13 @@ class SiamLightning(L.LightningModule):
         else:
             raise NotImplementedError
 
-        # if model_checkpoints is not None:
-        #     if torch.cuda.is_available():
-        #         self.model.load_state_dict(
-        #             torch.load(model_checkpoints[bands]))
-        #     else:
-        #         self.model.load_state_dict(torch.load(
-        #             model_checkpoints[bands], map_location=torch.device('cpu')))
+        if model_checkpoint is not None:
+            if torch.cuda.is_available():
+                self.model.load_state_dict(
+                    torch.load(model_checkpoint[bands]))
+            else:
+                self.model.load_state_dict(torch.load(
+                    model_checkpoint[bands], map_location=torch.device('cpu')))
 
         self.train_precision = Precision('binary')
         self.train_recall = Recall('binary')
@@ -76,6 +76,7 @@ class SiamLightning(L.LightningModule):
     #     acc = torchmetrics.functional.accuracy(y_true, y_pred, task="binary")
     #     self.log("metrics_epoch_loss", loss.mean())
     #     self.log("metrics_epoch_acc", acc)
+        return loss
 
     def validation_step(self, batch, batch_idx):
         image1, image2, y, feat1, feat2 = self.transform(batch)
@@ -114,6 +115,7 @@ class SiamLightning(L.LightningModule):
     #     self.log("metrics_val_acc", acc)
     #     self.log("metrics_val_prec", prec)
     #     self.log("metrics_val_rec", rec)
+        return loss
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), weight_decay=1e-4, lr=self.lr)
