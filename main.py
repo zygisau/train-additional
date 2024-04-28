@@ -75,6 +75,7 @@ if __name__ == "__main__":
     print("\n")
 
     # plugins = [SLURMEnvironment(requeue_signal=signal.SIGHUP)]
+    # #SBATCH --signal=SIGHUP@90
     trainer = Trainer(logger=neptune_logger, max_epochs=opt.max_epochs, accelerator='gpu', devices=1, callbacks=checkpoints,
                       default_root_dir="/scratch/lustre/home/zyau5516/source/train-additional/.neptune/None/version_None/checkpoints", resume_from_checkpoint=last_checkpoint)
     trainer.fit(model, dataset)

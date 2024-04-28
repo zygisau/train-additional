@@ -22,11 +22,19 @@ class SiamLightning(L.LightningModule):
 
         if model_checkpoint is not None:
             if torch.cuda.is_available():
-                self.model.load_state_dict(
-                    torch.load(model_checkpoint[bands]))
+                checkpoint = torch.load(model_checkpoint)
             else:
-                self.model.load_state_dict(torch.load(
-                    model_checkpoint[bands], map_location=torch.device('cpu')))
+                checkpoint = torch.load(
+                    model_checkpoint, map_location=torch.device('cpu'))
+
+            model_dict = self.model.state_dict()
+            # 1. filter out unnecessary keys
+            pretrained_dict = {k: v for k, v in checkpoint.items(
+            ) if k in self.model.state_dict() and k not in ['upconv4.weight', 'upconv4.bias']}
+            # 2. overwrite entries in the existing state dict
+            model_dict.update(pretrained_dict)
+            # 3. load the new state dict
+            self.model.load_state_dict(pretrained_dict, strict=False)
 
         self.train_precision = Precision('binary')
         self.train_recall = Recall('binary')
