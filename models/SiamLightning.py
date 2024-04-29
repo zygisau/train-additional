@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torchmetrics import Accuracy, F1Score, Precision, Recall
 import torchmetrics
 
+from models.focal_loss import FocalLoss
 from temp.siamunet_diff import SiamUnet_diff
 
 
@@ -53,7 +54,8 @@ class SiamLightning(L.LightningModule):
         image1, image2, y, feat1, feat2 = self.transform(batch)
 
         y_hat = self.model(image1, image2, feat1, feat2)
-        loss = F.nll_loss(input=y_hat, target=y.long())
+        # loss = F.nll_loss(input=y_hat, target=y.long())
+        loss = FocalLoss()(input=y_hat, target=y.long())
         self.log("metrics_train_loss", loss, on_step=True,
                  on_epoch=True, prog_bar=False)
 
@@ -89,7 +91,7 @@ class SiamLightning(L.LightningModule):
     def validation_step(self, batch, batch_idx):
         image1, image2, y, feat1, feat2 = self.transform(batch)
         y_hat = self.model(image1, image2, feat1, feat2)
-        loss = F.nll_loss(input=y_hat, target=y.long())
+        loss = FocalLoss()(input=y_hat, target=y.long())
         self.log("metrics_valid_loss", loss, on_step=False,
                  on_epoch=True, prog_bar=False)
 
@@ -105,6 +107,7 @@ class SiamLightning(L.LightningModule):
         self.log("metrics_valid_acc", accuracy, on_step=False, on_epoch=True)
 
         # return {"loss": loss, "y_true": y_true, "y_pred": y_pred}
+        return loss
 
     # def validation_epoch_end(self, outputs):
     #     loss = np.array([])
