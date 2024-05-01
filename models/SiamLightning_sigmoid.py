@@ -5,14 +5,14 @@ import torch.nn.functional as F
 from torchmetrics import Accuracy, F1Score, Precision, Recall
 import torchmetrics
 
+from models.dice_bce_loss import dice_bce_loss
 from models.focal_loss import FocalLoss
 from temp.siamunet_diff import SiamUnet_diff
 
 
 class SiamLightning(L.LightningModule):
-    def __init__(self, bands, lr, transform=None, model_checkpoint=None, get_weights=None):
+    def __init__(self, bands, lr, transform=None, model_checkpoint=None):
         super().__init__()
-        self.get_weights = get_weights if get_weights is not None else lambda: None
         self.lr = lr
         self.transform = transform
         if bands == 'rgb':
@@ -54,14 +54,16 @@ class SiamLightning(L.LightningModule):
     def training_step(self, batch, batch_idx):
         image1, image2, y, feat1, feat2 = self.transform(batch)
 
-        y_hat = self.model(image1, image2, feat1, feat2)
-        loss = F.nll_loss(input=y_hat, target=y.long(),
-                          weight=self.get_weights())
+        y_out = self.model(image1, image2, feat1, feat2)
+        y_pred = torch.nn.functional.log_softmax(y_out, dim=1)
+        # loss = F.nll_loss(input=y_hat, target=y.long())
+        focal_loss = FocalLoss()(input=y_out, target=y.long())
+        dice_loss = dice_bce_loss()(y_pred, y_out, y.long())
         self.log("metrics_train_loss", loss, on_step=True,
                  on_epoch=True, prog_bar=False)
 
         y_true = y.cpu()
-        y_pred = y_hat.argmax(axis=1).cpu()
+        y_pred = y_out.argmax(axis=1).cpu()
         precision = self.train_precision(y_pred, y_true)
         recall = self.train_recall(y_pred, y_true)
         f1 = self.train_f1(y_pred, y_true)
@@ -92,8 +94,7 @@ class SiamLightning(L.LightningModule):
     def validation_step(self, batch, batch_idx):
         image1, image2, y, feat1, feat2 = self.transform(batch)
         y_hat = self.model(image1, image2, feat1, feat2)
-        loss = F.nll_loss(input=y_hat, target=y.long(),
-                          weight=self.get_weights())
+        loss = FocalLoss()(input=y_hat, target=y.long())
         self.log("metrics_valid_loss", loss, on_step=False,
                  on_epoch=True, prog_bar=False)
 
@@ -131,9 +132,7 @@ class SiamLightning(L.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(
-            self.parameters(), lr=self.lr, weight_decay=1e-4)
-        # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.95)
-        # [optimizer], [scheduler]
-        return optimizer
+        optimizer = torch.optim.Adam(lr=self.lr, weight_decay=1e-4)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.95)
+        return [optimizer], [scheduler]
         # return torch.optim.Adam(self.parameters(), weight_decay=1e-4, lr=self.lr)

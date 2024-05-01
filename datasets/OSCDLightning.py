@@ -57,5 +57,8 @@ class OSCDLightning(L.LightningDataModule):
     def predict_dataloader(self):
         return DataLoader(self.oscd, batch_size=self.batch_size, num_workers=self.num_workers)
 
+    def weights(self):
+        return self.oscd.weights
+
     def __len__(self) -> int:
         return len(self.oscd)

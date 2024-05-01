@@ -11,10 +11,11 @@ from torch.nn.modules.padding import ReplicationPad2d
 class SiamUnet_diff(nn.Module):
     """SiamUnet_diff segmentation network."""
 
-    def __init__(self, input_nbr, label_nbr, feature_nbr):
+    def __init__(self, input_nbr, label_nbr, feature_nbr, apply_softmax=True):
         super(SiamUnet_diff, self).__init__()
 
         self.input_nbr = input_nbr
+        self.apply_softmax = apply_softmax
 
         self.conv11 = nn.Conv2d(input_nbr, 16, kernel_size=3, padding=1)
         self.bn11 = nn.BatchNorm2d(16)
@@ -137,7 +138,8 @@ class SiamUnet_diff(nn.Module):
         self.conv11d = nn.ConvTranspose2d(
             16, label_nbr, kernel_size=3, padding=1)
 
-        self.sm = nn.LogSoftmax(dim=1)
+        if self.apply_softmax:
+            self.sm = nn.LogSoftmax(dim=1)
 
     def forward(self, x1, x2, feat1, feat2):
         """Forward method."""
@@ -233,4 +235,6 @@ class SiamUnet_diff(nn.Module):
         x12d = self.do12d(F.relu(self.bn12d(self.conv12d(x1d))))
         x11d = self.conv11d(x12d)
 
-        return self.sm(x11d)
+        if self.apply_softmax:
+            return self.sm(x11d)
+        return x11d
