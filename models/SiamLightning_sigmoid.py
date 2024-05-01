@@ -10,15 +10,15 @@ from models.focal_loss import FocalLoss
 from temp.siamunet_diff import SiamUnet_diff
 
 
-class SiamLightning(L.LightningModule):
+class SiamLightningSigmoid(L.LightningModule):
     def __init__(self, bands, lr, transform=None, model_checkpoint=None):
         super().__init__()
         self.lr = lr
         self.transform = transform
         if bands == 'rgb':
-            self.model = SiamUnet_diff(3, 2, 50)
+            self.model = SiamUnet_diff(3, 2, 50, apply_softmax=False)
         elif bands == 'all':
-            self.model = SiamUnet_diff(13, 2, 50)
+            self.model = SiamUnet_diff(13, 2, 50, apply_softmax=False)
         else:
             raise NotImplementedError
 
@@ -55,15 +55,15 @@ class SiamLightning(L.LightningModule):
         image1, image2, y, feat1, feat2 = self.transform(batch)
 
         y_out = self.model(image1, image2, feat1, feat2)
-        y_pred = torch.nn.functional.log_softmax(y_out, dim=1)
-        # loss = F.nll_loss(input=y_hat, target=y.long())
-        focal_loss = FocalLoss()(input=y_out, target=y.long())
-        dice_loss = dice_bce_loss()(y_pred, y_out, y.long())
+        y_true = y.cpu()
+        y_out = y_out.argmax(axis=1).cpu()
+        y_pred = torch.sigmoid(y_out)
+
+        loss = FocalLoss()(input=y_out, target=y.long())
+        # dice_loss = dice_bce_loss()(y_pred, y_out, y.long())
         self.log("metrics_train_loss", loss, on_step=True,
                  on_epoch=True, prog_bar=False)
 
-        y_true = y.cpu()
-        y_pred = y_out.argmax(axis=1).cpu()
         precision = self.train_precision(y_pred, y_true)
         recall = self.train_recall(y_pred, y_true)
         f1 = self.train_f1(y_pred, y_true)
@@ -132,7 +132,8 @@ class SiamLightning(L.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(lr=self.lr, weight_decay=1e-4)
+        optimizer = torch.optim.Adam(
+            self.parameters(), lr=self.lr, weight_decay=1e-4)
         scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.95)
         return [optimizer], [scheduler]
         # return torch.optim.Adam(self.parameters(), weight_decay=1e-4, lr=self.lr)

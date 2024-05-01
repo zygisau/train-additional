@@ -5,6 +5,7 @@ import signal
 from lightning import Trainer
 from datasets.OSCDLightning import OSCDLightning
 from models.SiamLightning import SiamLightning
+from models.SiamLightning_sigmoid import SiamLightningSigmoid
 from transforms.AppendFeatures import AppendFeatures
 from transforms.RandomFlip import RandomFlip
 from transforms.RandomRot import RandomRot
