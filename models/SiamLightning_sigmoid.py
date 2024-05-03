@@ -48,24 +48,24 @@ class SiamLightningSigmoid(L.LightningModule):
         self.valid_f1 = F1Score('binary')
         self.valid_accuracy = Accuracy('binary')
 
+        self.criterion = torch.nn.BCELoss(self.get_weights())
+
     def forward(self, inputs):
         return self.model(inputs)
 
     def training_step(self, batch, batch_idx):
-        image1, image2, y, feat1, feat2 = self.transform(batch)
-        y_true = y.cpu()
+        image1, image2, y_true, feat1, feat2 = self.transform(batch)
 
         y_out = self.model(image1, image2, feat1, feat2)
-        y_pred = torch.sigmoid(y_out)
-        # y_out = y_out.argmax(axis=1).cpu().float()
+        y_pred = torch.nn.functional.sigmoid(y_out)
 
         # TODO: BCE loss oportunity
-        loss = FocalLoss()(input=y_pred, target=y_true)
-        # dice_loss = dice_bce_loss()(y_pred, y_out, y.long())
+        loss = self.criterion(y_pred, y_true)
         self.log("metrics_train_loss", loss, on_step=True,
                  on_epoch=True, prog_bar=False)
 
         # TODO: Move cpu conversion here
+        y_pred, y_true = y_pred.cpu(), y_true.cpu()
         precision = self.train_precision(y_pred, y_true)
         recall = self.train_recall(y_pred, y_true)
         f1 = self.train_f1(y_pred, y_true)
@@ -94,16 +94,16 @@ class SiamLightningSigmoid(L.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        image1, image2, y, feat1, feat2 = self.transform(batch)
+        image1, image2, y_true, feat1, feat2 = self.transform(batch)
+
         y_out = self.model(image1, image2, feat1, feat2)
-        y_true = y.cpu()
-        y_out = y_out.argmax(axis=1).cpu().float()
-        y_pred = torch.sigmoid(y_out)
-        
-        loss = FocalLoss()(input=y_out, target=y_true)
+        y_pred = torch.nn.functional.sigmoid(y_out)
+
+        loss = self.criterion(y_pred, y_true)
         self.log("metrics_valid_loss", loss, on_step=False,
                  on_epoch=True, prog_bar=False)
 
+        y_pred, y_true = y_pred.cpu(), y_true.cpu()
         precision = self.valid_precision(y_pred, y_true)
         recall = self.valid_recall(y_pred, y_true)
         f1 = self.valid_f1(y_pred, y_true)
