@@ -58,22 +58,26 @@ if __name__ == "__main__":
 
     batch_transform = AppendFeatures(
         opt.feature_model_path, opt.feature_model_checkpoint_path)
-    model = SiamLightning(bands='all', lr=opt.lr, transform=batch_transform,
+    # model = SiamLightning(bands='all', lr=opt.lr, transform=batch_transform,
+                        #   model_checkpoint=opt.siam_checkpoint_path, get_weights=dataset.weights)
+    model = SiamLightningSigmoid(bands='all', lr=opt.lr, transform=batch_transform,
                           model_checkpoint=opt.siam_checkpoint_path, get_weights=dataset.weights)
 
     last_checkpoint = None
-    last_checkpoint_path = "/scratch/lustre/home/zyau5516/source/train-additional/.neptune/None/version_None/checkpoints/"
-    # last checkpoint by modified date time
-    for file in os.listdir(last_checkpoint_path):
-        if file.endswith(".ckpt"):
-            if last_checkpoint is None:
-                last_checkpoint = file
-            elif os.path.getmtime(file) > os.path.getmtime(last_checkpoint):
-                last_checkpoint = file
-    print("=== Last checkpoint ===")
-    print(last_checkpoint)
-    print("=======================")
-    print("\n")
+    # last_checkpoint_path = "/scratch/lustre/home/zyau5516/source/train-additional/.neptune/None/version_None/checkpoints/"
+    # # last checkpoint by modified date time
+    # for file in os.listdir(last_checkpoint_path):
+    #     if file.endswith(".ckpt"):
+    #         if last_checkpoint is None:
+    #             last_checkpoint = file
+    #         elif os.path.getmtime(file) > os.path.getmtime(last_checkpoint):
+    #             last_checkpoint = file
+    # if last_checkpoint is not None:
+    #     last_checkpoint = last_checkpoint_path + last_checkpoint
+    # print("=== Last checkpoint ===")
+    # print(last_checkpoint)
+    # print("=======================")
+    # print("\n")
 
     # plugins = [SLURMEnvironment(requeue_signal=signal.SIGHUP)]
     # #SBATCH --signal=SIGHUP@90

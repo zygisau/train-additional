@@ -11,7 +11,7 @@ from temp.siamunet_diff import SiamUnet_diff
 
 
 class SiamLightningSigmoid(L.LightningModule):
-    def __init__(self, bands, lr, transform=None, model_checkpoint=None):
+    def __init__(self, bands, lr, transform=None, model_checkpoint=None, get_weights=None):
         super().__init__()
         self.lr = lr
         self.transform = transform
@@ -53,17 +53,19 @@ class SiamLightningSigmoid(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         image1, image2, y, feat1, feat2 = self.transform(batch)
+        y_true = y.cpu()
 
         y_out = self.model(image1, image2, feat1, feat2)
-        y_true = y.cpu()
-        y_out = y_out.argmax(axis=1).cpu()
         y_pred = torch.sigmoid(y_out)
+        # y_out = y_out.argmax(axis=1).cpu().float()
 
-        loss = FocalLoss()(input=y_out, target=y.long())
+        # TODO: BCE loss oportunity
+        loss = FocalLoss()(input=y_pred, target=y_true)
         # dice_loss = dice_bce_loss()(y_pred, y_out, y.long())
         self.log("metrics_train_loss", loss, on_step=True,
                  on_epoch=True, prog_bar=False)
 
+        # TODO: Move cpu conversion here
         precision = self.train_precision(y_pred, y_true)
         recall = self.train_recall(y_pred, y_true)
         f1 = self.train_f1(y_pred, y_true)
@@ -93,17 +95,19 @@ class SiamLightningSigmoid(L.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         image1, image2, y, feat1, feat2 = self.transform(batch)
-        y_hat = self.model(image1, image2, feat1, feat2)
-        loss = FocalLoss()(input=y_hat, target=y.long())
+        y_out = self.model(image1, image2, feat1, feat2)
+        y_true = y.cpu()
+        y_out = y_out.argmax(axis=1).cpu().float()
+        y_pred = torch.sigmoid(y_out)
+        
+        loss = FocalLoss()(input=y_out, target=y_true)
         self.log("metrics_valid_loss", loss, on_step=False,
                  on_epoch=True, prog_bar=False)
 
-        y_true = y.cpu()
-        y_pred = y_hat.argmax(axis=1).cpu()
-        precision = self.valid_precision(y_true, y_pred)
-        recall = self.valid_recall(y_true, y_pred)
-        f1 = self.valid_f1(y_true, y_pred)
-        accuracy = self.valid_accuracy(y_true, y_pred)
+        precision = self.valid_precision(y_pred, y_true)
+        recall = self.valid_recall(y_pred, y_true)
+        f1 = self.valid_f1(y_pred, y_true)
+        accuracy = self.valid_accuracy(y_pred, y_true)
         self.log("metrics_valid_prec", precision, on_step=False, on_epoch=True)
         self.log("metrics_valid_rec", recall, on_step=False, on_epoch=True)
         self.log("metrics_valid_f1", f1, on_step=False, on_epoch=True)
@@ -129,11 +133,10 @@ class SiamLightningSigmoid(L.LightningModule):
     #     self.log("metrics_val_acc", acc)
     #     self.log("metrics_val_prec", prec)
     #     self.log("metrics_val_rec", rec)
-        return loss
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
-            self.parameters(), lr=self.lr, weight_decay=1e-4)
+            filter(lambda p: p.requires_grad, self.model.parameters()), lr=self.lr, weight_decay=1e-4)
         scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.95)
-        return [optimizer], [scheduler]
+        return [optimizer]
         # return torch.optim.Adam(self.parameters(), weight_decay=1e-4, lr=self.lr)

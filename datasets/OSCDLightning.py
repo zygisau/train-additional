@@ -1,5 +1,6 @@
 import os
 import lightning as L
+import torch
 
 from datasets.OSCD import OSCDDataset
 from torch.utils.data import DataLoader
@@ -58,7 +59,9 @@ class OSCDLightning(L.LightningDataModule):
         return DataLoader(self.oscd, batch_size=self.batch_size, num_workers=self.num_workers)
 
     def weights(self):
-        return self.oscd.weights
+        if torch.cuda.is_available():
+            return torch.cuda.FloatTensor(self.oscd.weights)
+        return torch.FloatTensor(self.oscd.weights)
 
     def __len__(self) -> int:
         return len(self.oscd)
