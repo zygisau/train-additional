@@ -12,7 +12,7 @@ from scipy.ndimage import zoom
 from PIL import Image
 
 NORMALISE_IMGS = True
-FP_MODIFIER = 10  # Tuning parameter, use 1 if unsure
+FP_MODIFIER = 1  # Tuning parameter, use 1 if unsure
 TYPE = 3  # 0: RGB, 1: RGB+NIR, 2: RGB+NIR+SWIR1, 3: All bands
 
 

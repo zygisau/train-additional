@@ -58,10 +58,10 @@ if __name__ == "__main__":
 
     batch_transform = AppendFeatures(
         opt.feature_model_path, opt.feature_model_checkpoint_path)
-    # model = SiamLightning(bands='all', lr=opt.lr, transform=batch_transform,
-                        #   model_checkpoint=opt.siam_checkpoint_path, get_weights=dataset.weights)
-    model = SiamLightningSigmoid(bands='all', lr=opt.lr, transform=batch_transform,
+    model = SiamLightning(bands='all', lr=opt.lr, transform=batch_transform,
                           model_checkpoint=opt.siam_checkpoint_path, get_weights=dataset.weights)
+    # model = SiamLightningSigmoid(bands='all', lr=opt.lr, transform=batch_transform,
+                        #   model_checkpoint=opt.siam_checkpoint_path, get_weights=dataset.weights)
 
     last_checkpoint = None
     # last_checkpoint_path = "/scratch/lustre/home/zyau5516/source/train-additional/.neptune/None/version_None/checkpoints/"

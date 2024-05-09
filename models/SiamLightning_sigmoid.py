@@ -15,6 +15,7 @@ class SiamLightningSigmoid(L.LightningModule):
         super().__init__()
         self.lr = lr
         self.transform = transform
+        self.get_weights = get_weights
         if bands == 'rgb':
             self.model = SiamUnet_diff(3, 2, 50, apply_softmax=False)
         elif bands == 'all':
@@ -48,7 +49,8 @@ class SiamLightningSigmoid(L.LightningModule):
         self.valid_f1 = F1Score('binary')
         self.valid_accuracy = Accuracy('binary')
 
-        self.criterion = torch.nn.BCELoss(self.get_weights())
+    # def setup(self, stage):
+    #     self.criterion = F.binary_cross_entropy(self.get_weights())
 
     def forward(self, inputs):
         return self.model(inputs)
@@ -57,15 +59,16 @@ class SiamLightningSigmoid(L.LightningModule):
         image1, image2, y_true, feat1, feat2 = self.transform(batch)
 
         y_out = self.model(image1, image2, feat1, feat2)
-        y_pred = torch.nn.functional.sigmoid(y_out)
+        y_pred = torch.sigmoid(y_out)[:,1,:,:]
 
         # TODO: BCE loss oportunity
-        loss = self.criterion(y_pred, y_true)
+        print(y_pred.shape, y_true.shape, self.get_weights())
+        loss = F.binary_cross_entropy(y_pred, y_true, self.get_weights())
         self.log("metrics_train_loss", loss, on_step=True,
                  on_epoch=True, prog_bar=False)
 
         # TODO: Move cpu conversion here
-        y_pred, y_true = y_pred.cpu(), y_true.cpu()
+        y_pred, y_true = y_pred.cpu()[:,1,:,:], y_true.cpu()
         precision = self.train_precision(y_pred, y_true)
         recall = self.train_recall(y_pred, y_true)
         f1 = self.train_f1(y_pred, y_true)
@@ -97,13 +100,15 @@ class SiamLightningSigmoid(L.LightningModule):
         image1, image2, y_true, feat1, feat2 = self.transform(batch)
 
         y_out = self.model(image1, image2, feat1, feat2)
-        y_pred = torch.nn.functional.sigmoid(y_out)
+        y_pred = torch.sigmoid(y_out)[:,1,:,:]
 
-        loss = self.criterion(y_pred, y_true)
+        # TODO: BCE loss oportunity
+        print(y_pred.shape, y_true.shape, self.get_weights())
+        loss = F.binary_cross_entropy(y_pred, y_true, self.get_weights())
         self.log("metrics_valid_loss", loss, on_step=False,
                  on_epoch=True, prog_bar=False)
 
-        y_pred, y_true = y_pred.cpu(), y_true.cpu()
+        y_pred, y_true = y_pred.cpu()[:,1,:,:], y_true.cpu()
         precision = self.valid_precision(y_pred, y_true)
         recall = self.valid_recall(y_pred, y_true)
         f1 = self.valid_f1(y_pred, y_true)
