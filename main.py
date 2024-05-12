@@ -1,20 +1,17 @@
 
 
-import os
-import signal
 from lightning import Trainer
 from datasets.OSCDLightning import OSCDLightning
 from models.SiamLightning import SiamLightning
 from models.SiamLightning_sigmoid import SiamLightningSigmoid
 from transforms.AppendFeatures import AppendFeatures
-from transforms.RandomFlip import RandomFlip
-from transforms.RandomRot import RandomRot
-from utils.dotted import dotted
+from transforms.ColorJitter import ColorJitter
+from transforms.RandomNoise import RandomNoise
 from utils.parser import get_parser_with_args
 from pytorch_lightning.loggers import NeptuneLogger
 import torchvision.transforms as tr
-from lightning.pytorch.plugins.environments import SLURMEnvironment
 from lightning.pytorch.callbacks import ModelCheckpoint
+import matplotlib.pyplot as plt
 
 neptune_logger = NeptuneLogger(
     project="zygisau/train-additional",
@@ -28,10 +25,34 @@ if __name__ == "__main__":
     opt = config_parser.parse_args()
 
     transform = tr.Compose(
-        [RandomFlip(), RandomRot()])
-    # transform = None
+        [RandomNoise(mean=0, std=0.3), ColorJitter(0.5, 0.5, 0.5, 0.5)])
     dataset = OSCDLightning(opt.dataset, opt.batch_size,
                             transform=transform, num_workers=2)
+    # dataloader = dataset.setup('fit')
+    # dataloader = dataset.train_dataloader()
+    # for I1, I2, mask in dataloader:
+    #     # show images 2 rows 3 columns
+    #     plt.figure(figsize=(10, 10))
+    #     plt.subplot(2, 3, 1)
+    #     I1_img = I1[:, [0, 1, 2], :, :].squeeze()
+    #     plt.imshow(I1_img.permute(1, 2, 0))
+    #     I2_img = I2[:, [0, 1, 2], :, :].squeeze()
+    #     plt.subplot(2, 3, 2)
+    #     plt.imshow(I2_img.permute(1, 2, 0))
+    #     plt.subplot(2, 3, 3)
+    #     plt.imshow(mask.squeeze())
+
+    #     TI1, TI2, Tmask = transform((I1.clone(), I2.clone(), mask.clone()))
+    #     plt.subplot(2, 3, 4)
+    #     TI1_img = TI1[:, [0, 1, 2], :, :].squeeze()
+    #     plt.imshow(TI1_img.permute(1, 2, 0))
+    #     TI2_img = TI2[:, [0, 1, 2], :, :].squeeze()
+    #     plt.subplot(2, 3, 5)
+    #     plt.imshow(TI2_img.permute(1, 2, 0))
+    #     plt.subplot(2, 3, 6)
+    #     plt.imshow(Tmask.squeeze())
+    #     plt.show()
+
     checkpoints = [
         ModelCheckpoint(auto_insert_metric_name=True, monitor='metrics_train_prec',
                         save_top_k=3, save_last=True, every_n_epochs=1),
@@ -61,7 +82,7 @@ if __name__ == "__main__":
     model = SiamLightning(bands='all', lr=opt.lr, transform=batch_transform,
                           model_checkpoint=opt.siam_checkpoint_path, get_weights=dataset.weights)
     # model = SiamLightningSigmoid(bands='all', lr=opt.lr, transform=batch_transform,
-                        #   model_checkpoint=opt.siam_checkpoint_path, get_weights=dataset.weights)
+    #   model_checkpoint=opt.siam_checkpoint_path, get_weights=dataset.weights)
 
     last_checkpoint = None
     # last_checkpoint_path = "/scratch/lustre/home/zyau5516/source/train-additional/.neptune/None/version_None/checkpoints/"
