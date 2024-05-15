@@ -90,23 +90,27 @@ class ColorJitter(object):
         Returns:
             PIL Image or Tensor: Color jittered image.
         """
-        fn_idx, brightness_factor, contrast_factor, saturation_factor, hue_factor = self.__get_params(
-            self.brightness, self.contrast, self.saturation, self.hue
-        )
+        # fn_idx, brightness_factor, contrast_factor, saturation_factor, hue_factor = self.__get_params(
+        #     self.brightness, self.contrast, self.saturation, self.hue
+        # )
+        brightness_factor = None if self.brightness is None else float(
+            torch.empty(1).uniform_(self.brightness[0], self.brightness[1]))
 
-        for fn_id in fn_idx:
-            if fn_id == 0 and brightness_factor is not None:
-                img[:, [0, 1, 2], :, :] = F.adjust_brightness(
-                    img[:, [0, 1, 2], :, :], brightness_factor)
-            elif fn_id == 1 and contrast_factor is not None:
-                img[:, [0, 1, 2], :, :] = F.adjust_contrast(
-                    img[:, [0, 1, 2], :, :], contrast_factor)
-            elif fn_id == 2 and saturation_factor is not None:
-                img[:, [0, 1, 2], :, :] = F.adjust_saturation(
-                    img[:, [0, 1, 2], :, :], saturation_factor)
-            elif fn_id == 3 and hue_factor is not None:
-                img[:, [0, 1, 2], :, :] = F.adjust_hue(
-                    img[:, [0, 1, 2], :, :], hue_factor)
+        img[[0, 1, 2], :, :] = F.adjust_brightness(img[[0, 1, 2], :, :], brightness_factor)
+        # increase first three channels by brightness_factor
+        # for fn_id in fn_idx:
+            # if fn_id == 0 and brightness_factor is not None:
+            #     img[[0, 1, 2], :, :] = F.adjust_brightness(
+            #         img[[0, 1, 2], :, :], brightness_factor)
+            # elif fn_id == 1 and contrast_factor is not None:
+            #     img[[0, 1, 2], :, :] = F.adjust_contrast(
+            #         img[[0, 1, 2], :, :], contrast_factor)
+            # elif fn_id == 2 and saturation_factor is not None:
+            #     img[[0, 1, 2], :, :] = F.adjust_saturation(
+            #         img[[0, 1, 2], :, :], saturation_factor)
+            # elif fn_id == 3 and hue_factor is not None:
+            #     img[[0, 1, 2], :, :] = F.adjust_hue(
+            #         img[[0, 1, 2], :, :], hue_factor)
 
         return img
 

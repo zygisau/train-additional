@@ -1,4 +1,4 @@
-
+#---S-B-A-T-C-H- --c-2-
 
 from lightning import Trainer
 from datasets.OSCDLightning import OSCDLightning
@@ -6,6 +6,7 @@ from models.SiamLightning import SiamLightning
 from models.SiamLightning_sigmoid import SiamLightningSigmoid
 from transforms.AppendFeatures import AppendFeatures
 from transforms.ColorJitter import ColorJitter
+from transforms.Normalise import Normalise
 from transforms.RandomNoise import RandomNoise
 from utils.parser import get_parser_with_args
 from pytorch_lightning.loggers import NeptuneLogger
@@ -23,9 +24,10 @@ neptune_logger = NeptuneLogger(
 if __name__ == "__main__":
     config_parser, _ = get_parser_with_args('config.json')
     opt = config_parser.parse_args()
+    neptune_logger.log_hyperparams(opt)
 
     transform = tr.Compose(
-        [RandomNoise(mean=0, std=0.3), ColorJitter(0.5, 0.5, 0.5, 0.5)])
+        [RandomNoise(mean=0, std=0.2), ColorJitter(0.1, 0.1, 0.1, 0.1), Normalise()])
     dataset = OSCDLightning(opt.dataset, opt.batch_size,
                             transform=transform, num_workers=2)
     # dataloader = dataset.setup('fit')

@@ -50,13 +50,13 @@ class OSCDLightning(L.LightningDataModule):
         return DataLoader(self.oscd, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=True)
 
     def val_dataloader(self):
-        return DataLoader(self.oscd, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=True)
+        return DataLoader(self.oscd, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=False)
 
     def test_dataloader(self):
-        return DataLoader(self.oscd, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=True)
+        return DataLoader(self.oscd, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=False)
 
     def predict_dataloader(self):
-        return DataLoader(self.oscd, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=True)
+        return DataLoader(self.oscd, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=False)
 
     def weights(self):
         if torch.cuda.is_available():

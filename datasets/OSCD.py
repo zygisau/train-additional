@@ -11,7 +11,7 @@ from torch.utils.data import Dataset
 from scipy.ndimage import zoom
 from PIL import Image
 
-NORMALISE_IMGS = True
+NORMALISE_IMGS = False
 FP_MODIFIER = 1  # Tuning parameter, use 1 if unsure
 TYPE = 3  # 0: RGB, 1: RGB+NIR, 2: RGB+NIR+SWIR1, 3: All bands
 

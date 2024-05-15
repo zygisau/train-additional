@@ -38,17 +38,17 @@ class SiamLightning(L.LightningModule):
             # 3. load the new state dict
             self.model.load_state_dict(pretrained_dict, strict=False)
         
-        self.train_precision = BinaryPrecision(multidim_average='global', threshold=0.5).to('cpu')
-        self.train_recall = BinaryRecall(threshold=0.5).to('cpu')
-        self.train_f1 = BinaryF1Score(threshold=0.5).to('cpu')
-        self.train_accuracy = BinaryAccuracy(threshold=0.5).to('cpu')
-        self.train_iou = BinaryJaccardIndex(threshold=0.5).to('cpu')
+        self.train_precision = BinaryPrecision(multidim_average='global', threshold=0.5).to('cuda')
+        self.train_recall = BinaryRecall(threshold=0.5).to('cuda')
+        self.train_f1 = BinaryF1Score(threshold=0.5).to('cuda')
+        self.train_accuracy = BinaryAccuracy(threshold=0.5).to('cuda')
+        self.train_iou = BinaryJaccardIndex(threshold=0.5).to('cuda')
 
-        self.valid_precision = BinaryPrecision(multidim_average='global', threshold=0.5).to('cpu')
-        self.valid_recall = BinaryRecall(threshold=0.5).to('cpu')
-        self.valid_f1 = BinaryF1Score(threshold=0.5).to('cpu')
-        self.valid_accuracy = BinaryAccuracy(threshold=0.5).to('cpu')
-        self.valid_iou = BinaryJaccardIndex(threshold=0.5).to('cpu')
+        self.valid_precision = BinaryPrecision(multidim_average='global', threshold=0.5).to('cuda')
+        self.valid_recall = BinaryRecall(threshold=0.5).to('cuda')
+        self.valid_f1 = BinaryF1Score(threshold=0.5).to('cuda')
+        self.valid_accuracy = BinaryAccuracy(threshold=0.5).to('cuda')
+        self.valid_iou = BinaryJaccardIndex(threshold=0.5).to('cuda')
 
     def forward(self, inputs):
         return self.model(inputs)
@@ -62,14 +62,14 @@ class SiamLightning(L.LightningModule):
         self.log("metrics_train_loss", loss, on_step=True,
                  on_epoch=True, prog_bar=False)
 
-        y_true = y.cpu().long()
+        y_true = y.long()
         _, y_pred = torch.max(y_hat.data, 1)
-        y_pred = torch.sigmoid(y_pred).cpu()
+        y_pred = torch.sigmoid(y_pred)
         precision = self.train_precision(y_pred, y_true)
         recall = self.train_recall(y_pred, y_true)
         f1 = self.train_f1(y_pred, y_true)
         acc = self.train_accuracy(y_pred, y_true)
-        iou = self.valid_iou.cpu()(y_pred.cpu(), y_true.cpu())
+        iou = self.valid_iou(y_pred, y_true)
 
         self.log("metrics_train_prec", precision, on_step=True, on_epoch=True)
         self.log("metrics_train_rec", recall, on_step=True, on_epoch=True)
@@ -84,7 +84,7 @@ class SiamLightning(L.LightningModule):
     #     y_true = np.array([])
     #     y_pred = np.array([])
     #     for results_dict in outputs:
-    #         loss = np.append(loss, results_dict["loss"].cpu().numpy())
+    #         loss = np.append(loss, results_dict["loss"].numpy())
     #         y_true = np.append(y_true, results_dict["y_true"])
     #         y_pred = np.append(y_pred, results_dict["y_pred"])
     #     y_true = torch.tensor(y_true)
@@ -102,14 +102,14 @@ class SiamLightning(L.LightningModule):
         self.log("metrics_valid_loss", loss, on_step=False,
                  on_epoch=True, prog_bar=False)
 
-        y_true = y.cpu().long()
+        y_true = y.long()
         _, y_pred = torch.max(y_hat.data, 1)
-        y_pred = torch.sigmoid(y_pred).cpu()
+        y_pred = torch.sigmoid(y_pred)
         precision = self.valid_precision(y_pred, y_true)
         recall = self.valid_recall(y_pred, y_true)
         f1 = self.valid_f1(y_pred, y_true)
         accuracy = self.valid_accuracy(y_pred, y_true)
-        iou = self.valid_iou.to('cpu')(y_pred.cpu(), y_true.cpu())
+        iou = self.valid_iou(y_pred, y_true)
 
         self.log("metrics_valid_prec", precision, on_step=False, on_epoch=True)
         self.log("metrics_valid_rec", recall, on_step=False, on_epoch=True)
@@ -128,14 +128,14 @@ class SiamLightning(L.LightningModule):
         self.log("metrics_test_loss", loss, on_step=False,
                  on_epoch=True, prog_bar=False)
 
-        y_true = y.cpu().long()
+        y_true = y.long()
         _, y_pred = torch.max(y_hat.data, 1)
-        y_pred = torch.sigmoid(y_pred).cpu()
+        y_pred = torch.sigmoid(y_pred)
         precision = self.valid_precision(y_pred, y_true)
         recall = self.valid_recall(y_pred, y_true)
         f1 = self.valid_f1(y_pred, y_true)
         accuracy = self.valid_accuracy(y_pred, y_true)
-        iou = self.valid_iou.to('cpu')(y_pred.cpu(), y_true.cpu())
+        iou = self.valid_iou.to('cpu')(y_pred, y_true)
 
         self.log("metrics_test_prec", precision, on_step=False, on_epoch=True)
         self.log("metrics_test_rec", recall, on_step=False, on_epoch=True)
@@ -151,7 +151,7 @@ class SiamLightning(L.LightningModule):
     #     y_true = np.array([])
     #     y_pred = np.array([])
     #     for results_dict in outputs:
-    #         loss = np.append(loss, results_dict["loss"].cpu().numpy())
+    #         loss = np.append(loss, results_dict["loss"].numpy())
     #         y_true = np.append(y_true, results_dict["y_true"])
     #         y_pred = np.append(y_pred, results_dict["y_pred"])
     #     y_true = torch.tensor(y_true)
