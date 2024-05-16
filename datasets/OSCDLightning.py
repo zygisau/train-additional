@@ -43,8 +43,9 @@ class OSCDLightning(L.LightningDataModule):
         else:
             raise ValueError(f"Stage {stage} not recognized")
 
+        PATCH_SIDE = 224
         self.oscd = OSCDDataset(
-            obj.labels, obj.data, fname=obj.file, patch_side=224, transform=self.transform)
+            obj.labels, obj.data, fname=obj.file, patch_side=PATCH_SIDE, stride=32, transform=self.transform)
 
     def train_dataloader(self):
         return DataLoader(self.oscd, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=True)

@@ -56,14 +56,14 @@ class SiamLightning(L.LightningModule):
     def training_step(self, batch, batch_idx):
         image1, image2, y, feat1, feat2 = self.transform(batch)
 
-        y_hat = self.model(image1, image2, feat1, feat2)
+        y_hat, y_hat_for_sigmoid = self.model(image1, image2, feat1, feat2)
         loss = F.nll_loss(input=y_hat, target=y.long(),
                           weight=self.get_weights())
         self.log("metrics_train_loss", loss, on_step=True,
                  on_epoch=True, prog_bar=False)
 
         y_true = y.long()
-        _, y_pred = torch.max(y_hat.data, 1)
+        _, y_pred = torch.max(y_hat_for_sigmoid.data, 1)
         y_pred = torch.sigmoid(y_pred)
         precision = self.train_precision(y_pred, y_true)
         recall = self.train_recall(y_pred, y_true)
@@ -96,14 +96,14 @@ class SiamLightning(L.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         image1, image2, y, feat1, feat2 = self.transform(batch)
-        y_hat = self.model(image1, image2, feat1, feat2)
+        y_hat, y_hat_for_sigmoid = self.model(image1, image2, feat1, feat2)
         loss = F.nll_loss(input=y_hat, target=y.long(),
                           weight=self.get_weights())
         self.log("metrics_valid_loss", loss, on_step=False,
                  on_epoch=True, prog_bar=False)
 
         y_true = y.long()
-        _, y_pred = torch.max(y_hat.data, 1)
+        _, y_pred = torch.max(y_hat_for_sigmoid.data, 1)
         y_pred = torch.sigmoid(y_pred)
         precision = self.valid_precision(y_pred, y_true)
         recall = self.valid_recall(y_pred, y_true)
@@ -122,20 +122,20 @@ class SiamLightning(L.LightningModule):
     
     def test_step(self, batch, batch_idx):
         image1, image2, y, feat1, feat2 = self.transform(batch)
-        y_hat = self.model(image1, image2, feat1, feat2)
+        y_hat, y_hat_for_sigmoid = self.model(image1, image2, feat1, feat2)
         loss = F.nll_loss(input=y_hat, target=y.long(),
                           weight=self.get_weights())
         self.log("metrics_test_loss", loss, on_step=False,
                  on_epoch=True, prog_bar=False)
 
         y_true = y.long()
-        _, y_pred = torch.max(y_hat.data, 1)
+        _, y_pred = torch.max(y_hat_for_sigmoid.data, 1)
         y_pred = torch.sigmoid(y_pred)
         precision = self.valid_precision(y_pred, y_true)
         recall = self.valid_recall(y_pred, y_true)
         f1 = self.valid_f1(y_pred, y_true)
         accuracy = self.valid_accuracy(y_pred, y_true)
-        iou = self.valid_iou.to('cpu')(y_pred, y_true)
+        iou = self.valid_iou(y_pred, y_true)
 
         self.log("metrics_test_prec", precision, on_step=False, on_epoch=True)
         self.log("metrics_test_rec", recall, on_step=False, on_epoch=True)
@@ -168,9 +168,8 @@ class SiamLightning(L.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
             self.parameters(), lr=self.lr, weight_decay=1e-4)
-        # TODO: try to turn scheduler off -> No need, scheduler is orking every epoch
-        # TODO: try to test best checkpoint with test data
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.95)
-        return [optimizer], [scheduler]
+        
+        # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, 0.95)
+        return [optimizer]
         # return optimizer
         # return torch.optim.Adam(self.parameters(), weight_decay=1e-4, lr=self.lr)

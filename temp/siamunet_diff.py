@@ -236,5 +236,5 @@ class SiamUnet_diff(nn.Module):
         x11d = self.conv11d(x12d)
 
         if self.apply_softmax:
-            return self.sm(x11d)
-        return x11d
+            return self.sm(x11d), x11d
+        return x11d, x11d
