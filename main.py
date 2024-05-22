@@ -1,18 +1,21 @@
-#---S-B-A-T-C-H- --c-2-
-
+import matplotlib.pyplot as plt
+import torch
+import torchvision.transforms as tr
 from lightning import Trainer
+from lightning.pytorch.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import NeptuneLogger
+
+from context import Context
 from datasets.OSCDLightning import OSCDLightning
 from models.SiamLightning import SiamLightning
 from models.SiamLightning_sigmoid import SiamLightningSigmoid
 from transforms.AppendFeatures import AppendFeatures
 from transforms.ColorJitter import ColorJitter
 from transforms.Normalise import Normalise
+from transforms.RandomFlip import RandomFlip
 from transforms.RandomNoise import RandomNoise
+from transforms.RandomRot import RandomRot
 from utils.parser import get_parser_with_args
-from pytorch_lightning.loggers import NeptuneLogger
-import torchvision.transforms as tr
-from lightning.pytorch.callbacks import ModelCheckpoint
-import matplotlib.pyplot as plt
 
 neptune_logger = NeptuneLogger(
     project="zygisau/train-additional",
@@ -27,9 +30,9 @@ if __name__ == "__main__":
     neptune_logger.log_hyperparams(opt)
 
     transform = tr.Compose(
-        [RandomNoise(mean=0, std=0.2), ColorJitter(0.1, 0.1, 0.1, 0.1), Normalise()])
-    dataset = OSCDLightning(opt.dataset, opt.batch_size,
-                            transform=transform, num_workers=2)
+        [Normalise(), RandomFlip(), RandomRot()])
+    dataset = OSCDLightning(opt.dataset, opt.batch_size, band_mode='all',
+                            transform=transform, num_workers=4)
     # dataloader = dataset.setup('fit')
     # dataloader = dataset.train_dataloader()
     # for I1, I2, mask in dataloader:
@@ -81,12 +84,20 @@ if __name__ == "__main__":
 
     batch_transform = AppendFeatures(
         opt.feature_model_path, opt.feature_model_checkpoint_path)
+    context = Context(log_images=False)
     model = SiamLightning(bands='all', lr=opt.lr, transform=batch_transform,
-                          model_checkpoint=opt.siam_checkpoint_path, get_weights=dataset.weights)
+                          model_checkpoint=opt.siam_checkpoint_path, get_weights=dataset.weights, context=context)
     # model = SiamLightningSigmoid(bands='all', lr=opt.lr, transform=batch_transform,
     #   model_checkpoint=opt.siam_checkpoint_path, get_weights=dataset.weights)
 
     last_checkpoint = None
+    if last_checkpoint is not None:
+        checkpoint = torch.load(last_checkpoint)
+        weights = {k: v for k,
+                   v in checkpoint["state_dict"].items() if k.startswith("model.")}
+        # rename all keys to remove the "model." prefix
+        weights = {k[6:]: v for k, v in weights.items()}
+        model.model.load_state_dict(weights)
     # last_checkpoint_path = "/scratch/lustre/home/zyau5516/source/train-additional/.neptune/None/version_None/checkpoints/"
     # # last checkpoint by modified date time
     # for file in os.listdir(last_checkpoint_path):
@@ -102,8 +113,14 @@ if __name__ == "__main__":
     # print("=======================")
     # print("\n")
 
-    # plugins = [SLURMEnvironment(requeue_signal=signal.SIGHUP)]
-    # #SBATCH --signal=SIGHUP@90
-    trainer = Trainer(logger=neptune_logger, max_epochs=opt.max_epochs, accelerator='gpu', devices=1, callbacks=checkpoints,
-                      default_root_dir="/scratch/lustre/home/zyau5516/source/train-additional/.neptune/None/version_None/checkpoints", resume_from_checkpoint=last_checkpoint)
+    trainer = Trainer(logger=neptune_logger, max_epochs=opt.max_epochs, accelerator='gpu', devices=1,
+                      callbacks=checkpoints)
+
+    trainer.test(model, dataset)
     trainer.fit(model, dataset)
+
+    trainer.save_checkpoint("last_checkpoint.ckpt")
+
+    context.log_images = True
+    context.log_test_roc = True
+    trainer.test(model, dataset)

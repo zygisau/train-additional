@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import Dataset
 import rasterio
+from itertools import combinations
 
 
 class CustomPoints(Dataset):
@@ -12,16 +13,17 @@ class CustomPoints(Dataset):
             self.places = f.readlines()
             # remove whitespace characters like `\n` at the end of each line
             self.places = [x.strip() for x in self.places]
+        self.pairs = list(combinations(self.places, 2))
 
     def read_point(self, point_path):
         src = rasterio.open(point_path)
         return src.read().astype('float32')
 
     def __len__(self):
-        return len(self.places) - 1
+        return len(self.pairs) - 1
 
     def __getitem__(self, idx):
-        point_filename = [self.places[idx], self.places[idx+1]]
+        point_filename = self.pairs[idx]
         points = [self.read_point(point_filename[0]),
                   self.read_point(point_filename[1])]
         # crop to square

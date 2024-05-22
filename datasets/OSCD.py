@@ -1,15 +1,16 @@
 # Functions
 
-from skimage import io
-from math import ceil, floor
 import os
+from math import ceil, floor
+
 import numpy as np
-from pandas import read_csv
 import torch
-from tqdm import tqdm
-from torch.utils.data import Dataset
-from scipy.ndimage import zoom
+from pandas import read_csv
 from PIL import Image
+from scipy.ndimage import zoom
+from skimage import io
+from torch.utils.data import Dataset
+from tqdm import tqdm
 
 NORMALISE_IMGS = False
 FP_MODIFIER = 1  # Tuning parameter, use 1 if unsure
@@ -121,19 +122,19 @@ def read_sentinel_img_leq60(path):
     return I
 
 
-def read_sentinel_img_trio(img_path, labels_path):
+def read_sentinel_img_trio(img_path, labels_path, band_mode):
     """Read cropped Sentinel-2 image pair and change map."""
 #     read images
-    if TYPE == 0:
+    if band_mode == 'rgb':
         I1 = read_sentinel_img(img_path + '/imgs_1/')
         I2 = read_sentinel_img(img_path + '/imgs_2/')
-    elif TYPE == 1:
-        I1 = read_sentinel_img_4(img_path + '/imgs_1/')
-        I2 = read_sentinel_img_4(img_path + '/imgs_2/')
-    elif TYPE == 2:
-        I1 = read_sentinel_img_leq20(img_path + '/imgs_1/')
-        I2 = read_sentinel_img_leq20(img_path + '/imgs_2/')
-    elif TYPE == 3:
+    # elif TYPE == 1:
+    #     I1 = read_sentinel_img_4(img_path + '/imgs_1/')
+    #     I2 = read_sentinel_img_4(img_path + '/imgs_2/')
+    # elif TYPE == 2:
+    #     I1 = read_sentinel_img_leq20(img_path + '/imgs_1/')
+    #     I2 = read_sentinel_img_leq20(img_path + '/imgs_2/')
+    elif band_mode == 'all':
         I1 = read_sentinel_img_leq60(img_path + '/imgs_1/')
         I2 = read_sentinel_img_leq60(img_path + '/imgs_2/')
 
@@ -153,7 +154,6 @@ def read_sentinel_img_trio(img_path, labels_path):
     return new_I1, new_I2, cm
 
 
-
 def reshape_for_torch(I):
     """Transpose image for PyTorch coordinates."""
 #     out = np.swapaxes(I,1,2)
@@ -165,7 +165,7 @@ def reshape_for_torch(I):
 class OSCDDataset(Dataset):
     """Change Detection dataset class, used for both training and test data."""
 
-    def __init__(self, labels_path, path, patch_side=96, stride=None, transform=None, fname=None):
+    def __init__(self, labels_path, path, patch_side=96, stride=None, transform=None, fname=None, band_mode='all'):
         """
         Args:
             root_dir (string): Directory with all the images.
@@ -200,7 +200,7 @@ class OSCDDataset(Dataset):
         for im_name in tqdm(self.names):
             # load and store each image
             I1, I2, cm = read_sentinel_img_trio(
-                path + im_name, labels_path + im_name)
+                path + im_name, labels_path + im_name, band_mode=band_mode)
             self.imgs_1[im_name] = reshape_for_torch(I1)
             self.imgs_2[im_name] = reshape_for_torch(I2)
             self.change_maps[im_name] = cm
@@ -248,10 +248,13 @@ class OSCDDataset(Dataset):
                                   limits[2]:limits[3]]
 
         if I1.shape[1] < self.patch_side or I1.shape[2] < self.patch_side:
-            print(f'Problem with image size, image: {im_name}, I1 shape: {I1.shape}, I2 shape {I2.shape}, limits: {limits}')
+            print(
+                f'Problem with image size, image: {im_name}, I1 shape: {I1.shape}, I2 shape {I2.shape}, limits: {limits}')
             print('EXPECT ERROR')
-        I1 = np.pad(I1, ((0, 0), (0, self.patch_side - I1.shape[1]), (0, self.patch_side - I1.shape[2])), 'edge')
-        I2 = np.pad(I2, ((0, 0), (0, self.patch_side - I2.shape[1]), (0, self.patch_side - I2.shape[2])), 'edge')
+        I1 = np.pad(I1, ((0, 0), (0, self.patch_side -
+                    I1.shape[1]), (0, self.patch_side - I1.shape[2])), 'edge')
+        I2 = np.pad(I2, ((0, 0), (0, self.patch_side -
+                    I2.shape[1]), (0, self.patch_side - I2.shape[2])), 'edge')
 
         I1 = torch.from_numpy(I1).float()
         I2 = torch.from_numpy(I2).float()

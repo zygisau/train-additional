@@ -15,7 +15,6 @@ class FocalLoss(nn.Module):
         self.balance_param = balance_param
 
     def forward(self, input, target):
-
         cross_entropy = F.cross_entropy(input, target)
         cross_entropy_log = torch.log(cross_entropy)
         logpt = - F.cross_entropy(input, target)
